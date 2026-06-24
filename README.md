@@ -1,4 +1,3 @@
-```markdown
 # ai-RAG
 
 –епозиторий дл€ подготовки данных и создани€ RAG-системы перевода автотерминов (китайский ? русский) в автомобильной области.
@@ -7,31 +6,82 @@
 
 ## „то внутри
 
-- **data_for_RAG/** Ц готовые данные:
-  - `glossary.json` Ц глоссарий (массив объектов с пол€ми: chinese, russian, english, category, context).
-  - `glossary.jsonl` Ц тот же глоссарий в формате JSON Lines.
-  - `unprocessed_terms.jsonl` Ц новые термины без перевода (ждут ручного заполнени€).
+### ?? data_for_RAG/
 
-- **terms_processing_scripts/** Ц скрипты:
-  - `extract_terms.py` Ц извлекает уникальные термины из Excel/CSV (автоопределение столбца), сохран€ет новые в `unprocessed_terms.xlsx`.
-  - `find_unprocessed_terms.py` Ц сравнивает `glossary.json` с исходным Excel, добавл€ет недостающие термины в `unprocessed_terms.jsonl`.
+√отовые данные дл€ RAG-системы:
 
-- **.gitignore** Ц исключены: `BOMs/`, `*.xlsx` (исходные файлы), временные файлы.
+- `glossary.json` Ч глоссарий в формате JSON (массив объектов с пол€ми `chinese`, `russian`, `english`, `category`, `context`).
+- `glossary.jsonl` Ч тот же глоссарий в формате JSON Lines.
+- `unprocessed_terms.jsonl` Ч новые термины без перевода, ожидающие ручной обработки.
 
-- **requirements.txt** Ц зависимости: `pandas`, `openpyxl`, `chardet`.
+### ?? terms_processing_scripts/
+
+—крипты дл€ обработки терминов:
+
+- `extract_terms.py` Ч извлекает уникальные термины из Excel/CSV-файлов (автоматически определ€ет нужный столбец) и сохран€ет новые термины в `unprocessed_terms.xlsx`.
+- `find_unprocessed_terms.py` Ч сравнивает `glossary.json` с исходными Excel-файлами и добавл€ет отсутствующие термины в `unprocessed_terms.jsonl`.
+
+### ??  онфигураци€
+
+- `.gitignore` Ч исключает из репозитори€:
+  - директорию `BOMs/`;
+  - исходные Excel-файлы (`*.xlsx`);
+  - временные файлы и артефакты обработки.
+
+- `requirements.txt` Ч список зависимостей:
+  - `pandas`
+  - `openpyxl`
+  - `chardet`
 
 ---
 
 ## Ѕыстрый старт
 
+###  лонирование репозитори€
+
 ```bash
 git clone git@github.com:practice-avtotor/ai-RAG.git
 cd ai-RAG
+```
+
+### ”становка зависимостей
+
+```bash
 pip install -r requirements.txt
 ```
 
-### »звлечь новые термины
-ѕоместите Excel/CSV с терминами в корневую папку, запустите:
-```bash
-python terms_processing_scripts/extract_terms.py
+---
+
+## —труктура проекта
+
+```text
+ai-RAG/
+??? data_for_RAG/
+?   ??? glossary.json
+?   ??? glossary.jsonl
+?   ??? unprocessed_terms.jsonl
+?
+??? terms_processing_scripts/
+?   ??? extract_terms.py
+?   ??? find_unprocessed_terms.py
+?
+??? .gitignore
+??? requirements.txt
+??? README.md
+```
+
+---
+
+## ‘ормат записи терминов
+
+ѕример записи в `glossary.json`:
+
+```json
+{
+  "chinese": "???",
+  "russian": "двигатель",
+  "english": "engine",
+  "category": "powertrain",
+  "context": "ќсновной силовой агрегат автомобил€"
+}
 ```
