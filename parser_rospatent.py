@@ -1,5 +1,5 @@
-# Реализован парсинг названий патентов
-# Добавлена обработка результатов
+# Реализован переход по страницам пагинации
+# Добавлен сбор всех страниц
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -9,22 +9,10 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 
 MPK_SUBCLASSES = [
-    "F01",
-    "F02",
-    "F03",
-    "F04",
-    "F15",
-    "F16",
-    "F17",
-    "F21",
-    "F22",
-    "F23",
-    "F24",
-    "F25",
-    "F26",
-    "F27",
-    "F28",
-    "F41",
+    "F01", "F02", "F03", "F04",
+    "F15", "F16", "F17", "F21",
+    "F22", "F23", "F24", "F25",
+    "F26", "F27", "F28", "F41",
     "F42",
 ]
 
@@ -41,11 +29,11 @@ class PatentParser:
 
         self.driver = webdriver.Chrome(options=options)
         self.driver.implicitly_wait(10)
-        
+
         print("Драйвер запущен")
 
     def perform_search(self, query):
-        print(f"Поиск по запросу: {query}")
+        print(f"Поиск: {query}")
         self.driver.get("https://searchplatform.rospatent.gov.ru/patents_advanced")
         time.sleep(2)
 
@@ -58,10 +46,8 @@ class PatentParser:
         search_btn = self.driver.find_element(By.CSS_SELECTOR, "button.search_button")
         search_btn.click()
         time.sleep(5)
-        print("Поиск выполнен")
 
     def parse_titles(self):
-        """Парсинг названий патентов"""
         titles = []
         items = self.driver.find_elements(By.CSS_SELECTOR, "ul.report_items > li")
         print(f"Найдено {len(items)} патентов")
@@ -71,22 +57,50 @@ class PatentParser:
                 title_elem = item.find_element(By.CSS_SELECTOR, "div.report_caption")
                 title = title_elem.text.strip()
                 if title:
-                    # Очистка номера
                     if title[0].isdigit() and ". " in title:
                         title = title.split(". ", 1)[1]
                     titles.append(title)
-
             except Exception as e:
-                print(f"Exception {e}")
+                print(f"Exception: {e}")
                 continue
+
         return titles
+
+    def go_to_next_page(self):
+        """Переход на следующую страницу"""
+        try:
+            pagination = self.driver.find_elements(
+                By.CSS_SELECTOR, "ul.pagination li a"
+            )
+            for link in pagination:
+                if link.text.strip() in [">", "»"]:
+                    link.click()
+                    time.sleep(3)
+                    return True
+            return False
+        except Exception as e:
+            print(f"Exception: {e}")
+            return False
 
     def collect_patents(self, subclass):
         query = f"IC=({subclass})"
         self.perform_search(query)
-        titles = self.parse_titles()
-        print(f"Собрано {len(titles)} названий для {subclass}")
-        return titles
+        all_titles = []
+        page = 1
+
+        while page <= 10:  # максимум 10 страниц
+            print(f"Страница {page}")
+            titles = self.parse_titles()
+            if not titles:
+                break
+            all_titles.extend(titles)
+
+            if not self.go_to_next_page():
+                break
+            page += 1
+
+        print(f"Всего собрано {len(all_titles)} названий")
+        return all_titles
 
     def run(self):
         self.setup_driver()
