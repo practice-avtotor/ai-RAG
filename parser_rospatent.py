@@ -1,11 +1,13 @@
-# Реализован переход по страницам пагинации
-# Добавлен сбор всех страниц
+# Реализовано сохранение данных в CSV файлы
+# Добавлена структура папок
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import csv
+import os
 import time
 
 MPK_SUBCLASSES = [
@@ -21,6 +23,8 @@ class PatentParser:
     def __init__(self):
         print("Инициализация парсера")
         self.driver = None
+        self.output_dir = "patents_data"
+        os.makedirs(self.output_dir, exist_ok=True)
 
     def setup_driver(self):
         options = Options()
@@ -63,11 +67,9 @@ class PatentParser:
             except Exception as e:
                 print(f"Exception: {e}")
                 continue
-
         return titles
 
     def go_to_next_page(self):
-        """Переход на следующую страницу"""
         try:
             pagination = self.driver.find_elements(
                 By.CSS_SELECTOR, "ul.pagination li a"
@@ -82,13 +84,23 @@ class PatentParser:
             print(f"Exception: {e}")
             return False
 
+    def save_to_csv(self, titles, subclass):
+        """Сохранение в CSV"""
+        filename = os.path.join(self.output_dir, f"patents_{subclass}.csv")
+        with open(filename, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["title"])
+            for title in titles:
+                writer.writerow([title])
+        print(f"Сохранено {len(titles)} записей в {filename}")
+
     def collect_patents(self, subclass):
         query = f"IC=({subclass})"
         self.perform_search(query)
         all_titles = []
         page = 1
 
-        while page <= 10:  # максимум 10 страниц
+        while page <= 10:
             print(f"Страница {page}")
             titles = self.parse_titles()
             if not titles:
@@ -99,7 +111,7 @@ class PatentParser:
                 break
             page += 1
 
-        print(f"Всего собрано {len(all_titles)} названий")
+        self.save_to_csv(all_titles, subclass)
         return all_titles
 
     def run(self):
