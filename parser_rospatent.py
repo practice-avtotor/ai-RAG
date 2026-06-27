@@ -1,10 +1,11 @@
-# patents_parser_v2.py
-# Добавлена инициализация Selenium WebDriver
-
-# TODO: Настроить пути к браузеру
+# Реализован переход на страницу поиска
+# Добавлена базовая структура поиска
 
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 
 class PatentParser:
@@ -13,21 +14,29 @@ class PatentParser:
         self.driver = None
     
     def setup_driver(self):
-        """Инициализация Chrome драйвера"""
-
         options = Options()
         options.add_argument('--no-sandbox')
-        self.driver = webdriver.Chrome(options=options)
+        options.add_argument('--disable-dev-shm-usage')
 
+        self.driver = webdriver.Chrome(options=options)
+        
         print("Драйвер запущен")
+    
+    def go_to_search_page(self):
+        """Переход на страницу поиска"""
+        
+        print("Переход на страницу поиска...")
+        self.driver.get("https://searchplatform.rospatent.gov.ru/patents_advanced")
+        time.sleep(2)
+        print("Страница загружена")
     
     def run(self):
         self.setup_driver()
-        print("Запуск парсера")
-
-        # TODO: Реализовать парсинг
-
-        time.sleep(2)
+        self.go_to_search_page()
+        
+        # TODO: Добавить логику поиска
+        
+        time.sleep(5)
         self.driver.quit()
 
 if __name__ == "__main__":
