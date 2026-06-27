@@ -1,6 +1,5 @@
-# patents_parser_v10.py
-# Улучшена логика пагинации
-# Добавлена проверка наличия кнопки "Далее"
+# Добавлена проверка наличия результатов поиска
+# Обработка случая "ничего не найдено"
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -13,8 +12,10 @@ import os
 import time
 import logging
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 MPK_SUBCLASSES = [
@@ -53,55 +54,63 @@ class PatentParser:
         search_input.send_keys(query)
         
         search_btn = self.driver.find_element(By.CSS_SELECTOR, "button.search_button")
-        search_btn.click()
+        self.driver.execute_script("arguments[0].click();", search_btn)
         time.sleep(5)
-        logger.info("Поиск выполнен")
+        
+        # Проверка результатов
+        try:
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "ul.report_items > li"))
+            )
+            logger.info("Результаты найдены")
+            return True
+        except TimeoutException:
+            # Проверяем сообщение "ничего не найдено"
+            try:
+                no_results = self.driver.find_element(By.XPATH, "//div[contains(text(), 'ничего не найдено')]")
+                logger.warning("Ничего не найдено")
+                return False
+            except:
+                logger.warning("Неизвестная ошибка при загрузке результатов")
+                return False
     
     def parse_titles(self):
         titles = []
-        items = self.driver.find_elements(By.CSS_SELECTOR, "ul.report_items > li")
-        logger.info(f"Найдено {len(items)} патентов")
-        
-        for item in items:
-            try:
-                title_elem = item.find_element(By.CSS_SELECTOR, "div.report_caption")
-                title = title_elem.text.strip()
-                if title:
-                    if title[0].isdigit() and ". " in title:
-                        title = title.split(". ", 1)[1]
-                    titles.append(title)
-            except Exception as ex:
-                logger.debug(f"Ошибка парсинга названия: {ex}")
-                continue
+        try:
+            items = self.driver.find_elements(By.CSS_SELECTOR, "ul.report_items > li")
+            logger.info(f"Найдено {len(items)} патентов")
+            
+            for item in items:
+                try:
+                    title_elem = item.find_element(By.CSS_SELECTOR, "div.report_caption")
+                    title = title_elem.text.strip()
+                    if title:
+                        if title[0].isdigit() and ". " in title:
+                            title = title.split(". ", 1)[1]
+                        titles.append(title)
+                except:
+                    continue
+        except Exception as e:
+            logger.error(f"Ошибка парсинга: {e}")
         return titles
     
     def go_to_next_page(self):
-        """Переход на следующую страницу с проверкой"""
         try:
             pagination_links = self.driver.find_elements(By.CSS_SELECTOR, "ul.pagination li a")
-            next_btn = None
-            
             for link in pagination_links:
-                text = link.text.strip()
-                if text in [">", "»", "›", "next", "след", "далее"]:
-                    class_name = link.get_attribute("class") or ""
-                    if "disabled" not in class_name:
-                        next_btn = link
-                        break
-            
-            if not next_btn:
-                logger.info("Кнопка 'Далее' не найдена или неактивна")
-                return False
-            
-            self.driver.execute_script("arguments[0].click();", next_btn)
-            time.sleep(3)
-            logger.info("Переход на следующую страницу")
-            return True
-        except Exception as e:
-            logger.debug(f"Ошибка перехода: {e}")
+                if link.text.strip() in [">", "»"]:
+                    link.click()
+                    time.sleep(3)
+                    return True
+            return False
+        except:
             return False
     
     def save_to_csv(self, titles, subclass):
+        if not titles:
+            logger.warning(f"Нет данных для сохранения {subclass}")
+            return
+        
         filename = os.path.join(self.output_dir, f"patents_{subclass}.csv")
         with open(filename, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
@@ -112,7 +121,9 @@ class PatentParser:
     
     def collect_patents(self, subclass):
         query = f"IC=({subclass})"
-        self.perform_search(query)
+        if not self.perform_search(query):
+            return []
+        
         all_titles = []
         page = 1
         
@@ -122,34 +133,4 @@ class PatentParser:
             if not titles:
                 break
             
-            if len(titles) < 10:
-                logger.info("На странице меньше 10 патентов - последняя")
-                all_titles.extend(titles)
-                break
-            
-            all_titles.extend(titles)
-            
-            if not self.go_to_next_page():
-                break
-            page += 1
-        
-        self.save_to_csv(all_titles, subclass)
-        return all_titles
-    
-    def run(self):
-        self.setup_driver()
-        try:
-            for subclass in MPK_SUBCLASSES:
-                logger.info(f"\nОбработка подкласса {subclass}")
-                titles = self.collect_patents(subclass)
-                logger.info(f"Результат: {len(titles)} патентов")
-                time.sleep(2)
-        except Exception as e:
-            logger.error(f"Критическая ошибка: {e}")
-        finally:
-            self.driver.quit()
-            logger.info("Драйвер закрыт")
-
-if __name__ == "__main__":
-    parser = PatentParser()
-    parser.run()
+            all_titles
