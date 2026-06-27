@@ -1,5 +1,5 @@
-# Добавлена проверка наличия результатов поиска
-# Обработка случая "ничего не найдено"
+# Добавлена возможность ручной установки лимита на первой странице
+# Улучшен механизм ожидания
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -42,7 +42,14 @@ class PatentParser:
         self.driver.implicitly_wait(10)
         logger.info("Драйвер запущен")
     
-    def perform_search(self, query):
+    def wait_for_manual_limit(self, wait_seconds=5):
+        """Ожидание для ручной установки лимита"""
+        logger.info(f"Ожидание {wait_seconds} секунд для ручной установки лимита...")
+        logger.info("Вы можете вручную выбрать 'Показать сразу: 100'")
+        time.sleep(wait_seconds)
+        logger.info("Продолжаем парсинг...")
+    
+    def perform_search(self, query, is_first=False):
         logger.info(f"Поиск по запросу: {query}")
         self.driver.get("https://searchplatform.rospatent.gov.ru/patents_advanced")
         time.sleep(2)
@@ -55,23 +62,24 @@ class PatentParser:
         
         search_btn = self.driver.find_element(By.CSS_SELECTOR, "button.search_button")
         self.driver.execute_script("arguments[0].click();", search_btn)
-        time.sleep(5)
+        time.sleep(3)
+        
+        # Ожидание для установки лимита (только для первого запроса)
+        if is_first:
+            self.wait_for_manual_limit(5)
         
         # Проверка результатов
         try:
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "ul.report_items > li"))
             )
-            logger.info("Результаты найдены")
             return True
         except TimeoutException:
-            # Проверяем сообщение "ничего не найдено"
             try:
                 no_results = self.driver.find_element(By.XPATH, "//div[contains(text(), 'ничего не найдено')]")
                 logger.warning("Ничего не найдено")
                 return False
             except:
-                logger.warning("Неизвестная ошибка при загрузке результатов")
                 return False
     
     def parse_titles(self):
@@ -98,10 +106,13 @@ class PatentParser:
         try:
             pagination_links = self.driver.find_elements(By.CSS_SELECTOR, "ul.pagination li a")
             for link in pagination_links:
-                if link.text.strip() in [">", "»"]:
-                    link.click()
-                    time.sleep(3)
-                    return True
+                text = link.text.strip()
+                if text in [">", "»"]:
+                    class_name = link.get_attribute("class") or ""
+                    if "disabled" not in class_name:
+                        link.click()
+                        time.sleep(3)
+                        return True
             return False
         except:
             return False
@@ -119,9 +130,9 @@ class PatentParser:
                 writer.writerow([title])
         logger.info(f"Сохранено {len(titles)} записей в {filename}")
     
-    def collect_patents(self, subclass):
+    def collect_patents(self, subclass, is_first=False):
         query = f"IC=({subclass})"
-        if not self.perform_search(query):
+        if not self.perform_search(query, is_first):
             return []
         
         all_titles = []
@@ -133,4 +144,34 @@ class PatentParser:
             if not titles:
                 break
             
-            all_titles
+            all_titles.extend(titles)
+            
+            if len(titles) < 10:
+                logger.info("На странице меньше 10 патентов - последняя")
+                break
+            
+            if not self.go_to_next_page():
+                break
+            page += 1
+        
+        self.save_to_csv(all_titles, subclass)
+        return all_titles
+    
+    def run(self):
+        self.setup_driver()
+        try:
+            for i, subclass in enumerate(MPK_SUBCLASSES, 1):
+                logger.info(f"\n{i} из {len(MPK_SUBCLASSES)}: {subclass}")
+                is_first = (i == 1)
+                titles = self.collect_patents(subclass, is_first)
+                logger.info(f"Результат: {len(titles)} патентов")
+                time.sleep(2)
+        except Exception as e:
+            logger.error(f"Критическая ошибка: {e}")
+        finally:
+            self.driver.quit()
+            logger.info("Драйвер закрыт")
+
+if __name__ == "__main__":
+    parser = PatentParser()
+    parser.run()
