@@ -1,5 +1,5 @@
-# Добавлен список всех подклассов раздела F
-# Реализован цикл по подклассам
+# Реализован парсинг названий патентов
+# Добавлена обработка результатов
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -8,7 +8,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-# Список подклассов раздела F
 MPK_SUBCLASSES = [
     "F01",
     "F02",
@@ -39,7 +38,7 @@ class PatentParser:
         options = Options()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        
+
         self.driver = webdriver.Chrome(options=options)
         self.driver.implicitly_wait(10)
         
@@ -58,28 +57,44 @@ class PatentParser:
 
         search_btn = self.driver.find_element(By.CSS_SELECTOR, "button.search_button")
         search_btn.click()
-        
-        time.sleep(3)
-        
+        time.sleep(5)
         print("Поиск выполнен")
 
+    def parse_titles(self):
+        """Парсинг названий патентов"""
+        titles = []
+        items = self.driver.find_elements(By.CSS_SELECTOR, "ul.report_items > li")
+        print(f"Найдено {len(items)} патентов")
+
+        for item in items:
+            try:
+                title_elem = item.find_element(By.CSS_SELECTOR, "div.report_caption")
+                title = title_elem.text.strip()
+                if title:
+                    # Очистка номера
+                    if title[0].isdigit() and ". " in title:
+                        title = title.split(". ", 1)[1]
+                    titles.append(title)
+
+            except Exception as e:
+                print(f"Exception {e}")
+                continue
+        return titles
+
     def collect_patents(self, subclass):
-        """Сбор патентов для подкласса"""
-        
         query = f"IC=({subclass})"
         self.perform_search(query)
-        
-        # TODO: Реализовать сбор данных
-        
-        print(f"Обработан подкласс {subclass}")
+        titles = self.parse_titles()
+        print(f"Собрано {len(titles)} названий для {subclass}")
+        return titles
 
     def run(self):
         self.setup_driver()
         
         for subclass in MPK_SUBCLASSES:
             print(f"\nОбработка {subclass}")
-        
-            self.collect_patents(subclass)
+            titles = self.collect_patents(subclass)
+            print(f"Результат: {len(titles)} патентов")
             time.sleep(2)
         
         self.driver.quit()
