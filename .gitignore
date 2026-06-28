@@ -1,0 +1,4 @@
+/.venv
+/patents_data
+merged.csv
+config.json
