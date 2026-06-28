@@ -43,6 +43,9 @@ ai-RAG/
 ├── scripts/
 │   ├── build_index.py          # Построение индекса
 │   └── test_search.py          # Интерактивное тестирование
+│   └── merge_csv_files.py      # Сливает результаты парсинга в один csv файл
+│   └── ollama_translation.py   # Переводит каждую строчку csv файла в jsonl
+│   └── parser_rospatent.py     # Парсит страницу роспатента по нескольким поисковым запросам
 │
 ├── requirements.txt
 ├── README.md
