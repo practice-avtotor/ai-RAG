@@ -10,7 +10,7 @@ class RAGConfig:
     """
     # пути к данным
     data_dir: Path = Path("data")
-    glossary_file: Path = Path("data/glossary.jsonl")
+    glossary_file: Path = Path("data/merged_glossary.jsonl")
     index_file: Path = Path("data/faiss.index")
     metadata_file: Path = Path("data/metadata.pkl")
     embeddings_file: Path = Path("data/embeddings.npy")
