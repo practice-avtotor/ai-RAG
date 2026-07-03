@@ -1,0 +1,15 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+.venv
+venv
+env
+*.log
+*.tmp
+.DS_Store
+node_modules
+tests
+*.md
+!README.md
+*.csv

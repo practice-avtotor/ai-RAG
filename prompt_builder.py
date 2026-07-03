@@ -1,55 +1,51 @@
-from typing import List, Dict
+from typing import Dict, List
 
 SYSTEM_PROMPT = """
 You are a patent translation expert.
 
-You MUST return ONLY valid JSON. No explanations, no markdown.
+You MUST return ONLY valid JSON. No explanations, no markdown, no extra text.
 
-Output format:
-{
-    "russian": "translation in Russian",
-    "chinese": "translation in Chinese",
-    "english": "cleaned English title",
-    "category": "category",
-    "context": "brief context"
-}
+Example input: "SEAL FOR AN EXCHANGER OF HEAT"
+Example output: {"russian": "Уплотнение теплообменника", "chinese": "换热器密封装置", "english": "Seal for a Heat Exchanger", "category": "heat exchangers", "context": "Устройство для герметизации соединений"}
 
-Translate this title:
+Now translate this title into Russian, Chinese, clean English, category, and context. Return ONLY JSON.
 """
+
 
 class PromptBuilder:
     """Строит промпты для LLM"""
 
     @classmethod
     def build(cls, text: str, examples: List[Dict]) -> str:
-        """
-        Строит полный промпт с примерами из RAG
-        """
+        """Строит полный промпт с примерами из RAG"""
         parts = [
-            f'Patent title to translate: "{text}"',
+            f'Title: "{text}"',
             "",
             cls._format_examples(examples),
             "",
-            "Translate this title into Russian and Chinese. Return ONLY JSON."
+            "Return ONLY JSON:",
         ]
-        
+
         return "\n".join(parts)
 
     @classmethod
     def _format_examples(cls, examples: List[Dict]) -> str:
         """Форматирует примеры из RAG"""
         if not examples:
-            return "(No similar terms found in the glossary.)"
-        
-        lines = ["Here are some similar terms from the glossary:"]
+            return "(No similar terms found in glossary.)"
+
+        lines = ["Similar terms from glossary:"]
         lines.append("")
-        
-        for i, ex in enumerate(examples[:3], 1):
-            lines.append(f"{i}. {ex.get('english', '')}")
-            lines.append(f"   RU: {ex.get('russian', '')}")
-            lines.append(f"   CN: {ex.get('chinese', '')}")
-            lines.append(f"   Category: {ex.get('category', '')}")
-            lines.append(f"   Context: {ex.get('context', '')}")
-            lines.append("")
-        
+
+        for i, ex in enumerate(examples[:2], 1):  # только 2 примера
+            lines.extend(
+                [
+                    f"{i}. {ex.get('english', '')}",
+                    f"   RU: {ex.get('russian', '')}",
+                    f"   CN: {ex.get('chinese', '')}",
+                    f"   Category: {ex.get('category', '')}",
+                    "",
+                ]
+            )
+
         return "\n".join(lines)

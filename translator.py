@@ -77,24 +77,26 @@ class PatentTranslator:
                 model=self.config.model_name,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
+                    {"role": "user", "content": prompt}
                 ],
-                temperature=0.1,
-                extra_body={"num_ctx": 4096},
+                temperature=0.0,
+                extra_body={"num_ctx": 2048}
             )
-
+            
             content = response.choices[0].message.content
+            
+            # Пробуем найти JSON
             result = self._extract_json(content)
-
             if result:
                 return result
-
-            logger.warning(f"Could not parse: {content[:100]}")
-            return self._get_fallback(prompt[:50])
-
+            
+            # Если JSON не найден = возвращаем заглушку
+            logger.warning(f"No JSON found in: {content[:200]}")
+            return self._get_fallback(content[:50])
+            
         except Exception as e:
             logger.error(f"Error with LLM: {e}")
-            return self._get_fallback(prompt[:50] if prompt else "unknown")
+            return self._get_fallback(prompt[:50])
 
     def _get_fallback(self, text: str) -> dict:
         """Возвращает заглушку при ошибке"""

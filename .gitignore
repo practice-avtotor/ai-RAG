@@ -31,3 +31,11 @@ ENV/
 .idea/
 *.swp
 *.swo
+
+
+# rag trash
+
+embeddings.npy
+metadata.pkl
+faiss.index
+

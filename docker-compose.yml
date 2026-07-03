@@ -1,0 +1,53 @@
+
+services:
+  # ==========================================
+  # 1. OLLAMA — сервер для LLM
+  # ==========================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+    # Если есть NVIDIA GPU — раскомментируй
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    command: serve
+
+  # ==========================================
+  # 2. TRANSLATOR — наш сервис перевода
+  # ==========================================
+  translator:
+    build: .
+    container_name: patent-translator
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434/v1
+      - LLM_MODEL=qwen2.5:7b
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./rag:/app/rag
+      - ./scripts:/app/scripts
+      - ./config.py:/app/config.py
+      - ./translator.py:/app/translator.py
+      - ./main.py:/app/main.py
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
