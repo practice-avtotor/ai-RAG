@@ -1,6 +1,8 @@
 import logging
-from typing import Dict, Optional
 from functools import lru_cache
+from typing import Dict, Optional
+
+from config import config
 
 logger = logging.getLogger(__name__)
 
@@ -8,12 +10,16 @@ logger = logging.getLogger(__name__)
 class TranslationCache:
     """LRU кэш для переводов"""
 
-    def __init__(self, max_size: int = 1000):
+    def __init__(self, max_size: int = None):
+
+        if max_size is None:
+            max_size = config.cache_size
+
         self.max_size = max_size
         self._cache: Dict[str, dict] = {}
         self._hits = 0
         self._misses = 0
-        logger.info(f"Cache initialized (max_size={max_size})")
+        logger.info(f"Cache initilazed (max_size={max_size})")
 
     def _get_key(self, text: str, top_k: int) -> str:
         """Генерирует ключ для кэша"""
@@ -41,7 +47,6 @@ class TranslationCache:
             return result
 
         self._misses += 1
-
         return None
 
     def set(self, text: str, top_k: int, result: dict) -> None:
@@ -62,10 +67,10 @@ class TranslationCache:
     def clear(self) -> None:
         """Очищает кэш"""
         self._cache.clear()
-        self._get_cached.cache_clear()  # очищаем lru_cache
+        self._get_cached.cache_clear()
         self._hits = 0
         self._misses = 0
-        logger.info("Cache is cleared")
+        logger.info("Cache cleared")
 
     def get_stats(self) -> dict:
         """Возвращает статистику кэша"""

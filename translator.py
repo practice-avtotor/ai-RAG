@@ -7,7 +7,7 @@ from openai import OpenAI
 
 from cache_manager import TranslationCache
 from config import config
-from prompt_builder import SYSTEM_PROMPT, PromptBuilder
+from prompt_builder import PromptBuilder
 from rag.config import RAGConfig
 from rag.retriever import Retriever
 
@@ -25,7 +25,7 @@ class PatentTranslator:
         self._init_rag()
 
         self.llm = self._init_llm()
-        self.cache = TranslationCache(max_size=self.config.cache_size)
+        self.cache = TranslationCache()
 
         logger.info("The translator has been initialized")
 
