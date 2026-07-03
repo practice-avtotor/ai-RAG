@@ -25,7 +25,6 @@ class PatentTranslator:
         self._init_rag()
 
         self.llm = self._init_llm()
-
         self.cache = TranslationCache(max_size=self.config.cache_size)
 
         logger.info("The translator has been initialized")
@@ -77,23 +76,21 @@ class PatentTranslator:
                 model=self.config.model_name,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": prompt},
                 ],
-                temperature=0.0,
-                extra_body={"num_ctx": 2048}
+                temperature=self.config.llm_temperature,
+                extra_body={"num_ctx": self.config.llm_context_size},
             )
-            
+
             content = response.choices[0].message.content
-            
-            # Пробуем найти JSON
+
             result = self._extract_json(content)
             if result:
                 return result
             
-            # Если JSON не найден = возвращаем заглушку
             logger.warning(f"No JSON found in: {content[:200]}")
             return self._get_fallback(content[:50])
-            
+
         except Exception as e:
             logger.error(f"Error with LLM: {e}")
             return self._get_fallback(prompt[:50])
@@ -114,14 +111,19 @@ class PatentTranslator:
             return []
 
         try:
-            results = self.retriever.retrieve(text, top_k=top_k)
+            results = self.retriever.retrieve(
+                text,
+                top_k=top_k,
+                min_similarity=self.config.rag_min_similarity,  # 👈 Из config
+            )
             return [r.to_dict() for r in results]
 
         except Exception as e:
-            logger.warning(f"Error with RAG: {e}")
+            logger.warning(f"⚠️ RAG ошибка: {e}")
             return []
 
-    def translate(self, text: str, top_k: int = 5, use_rag: bool = True) -> dict:
+    def translate(self, text: str, top_k: Optional[int] = None, 
+                  use_rag: bool = True) -> dict:
         """
         Основной метод перевода
         """
@@ -137,12 +139,15 @@ class PatentTranslator:
                 "rag_examples": [],
             }
 
+        if top_k is None:
+            top_k = self.config.rag_top_k
+
         cached = self.cache.get(text, top_k)
 
         if cached:
             return cached
 
-        logger.info(f"🔄 Перевод: {text[:50]}...")
+        logger.info(f"Translated: {text[:50]}...")
 
         rag_examples = []
         rag_used = False
@@ -152,7 +157,7 @@ class PatentTranslator:
             rag_used = True
 
             if rag_examples:
-                logger.info(f"🔍 RAG найдено: {len(rag_examples)} примеров")
+                logger.info(f"RAG found: {len(rag_examples)} examples")
 
         prompt = PromptBuilder.build(text, rag_examples[:3])
         llm_result = self._call_llm(prompt)
@@ -173,11 +178,13 @@ class PatentTranslator:
 
         return result
 
-    def translate_batch(self, texts: List[str], top_k: int = 5, 
+    def translate_batch(self, texts: List[str], top_k: Optional[int] = None, 
                         use_rag: bool = True) -> List[dict]:
         """Переводит несколько текстов"""
-        results = []
+        if top_k is None:
+            top_k = self.config.rag_top_k
 
+        results = []
         for text in texts:
             result = self.translate(text, top_k, use_rag)
             results.append(result)
@@ -195,6 +202,8 @@ class PatentTranslator:
             else 0,
             "rag_available": self.rag_available,
             "model_name": self.config.model_name,
+            "temperature": self.config.llm_temperature,
+            "context_size": self.config.llm_context_size,
         }
 
 
