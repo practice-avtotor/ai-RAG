@@ -75,7 +75,7 @@ class PatentTranslator:
             response = self.llm.chat.completions.create(
                 model=self.config.model_name,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": PromptBuilder.get_system_prompt()},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=self.config.llm_temperature,
