@@ -46,3 +46,5 @@ typing-inspection==0.4.2
 urllib3==2.7.0
 websocket-client==1.9.0
 wsproto==1.3.2
+python-dotenv==1.2.2
+pyyaml>=6.0
