@@ -4,12 +4,10 @@ from pathlib import Path
 from typing import List, Tuple
 
 import faiss
-import numpy as np
 
 from .config import RAGConfig
 from .embedder import Embedder
 from .loader import GlossaryLoader
-from .models import GlossaryEntry
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +20,10 @@ class IndexBuilder:
         self.config = config
         self.loader = GlossaryLoader(config)
         self.embedder = Embedder(config)
+    
+    def index_exists(self) -> bool:
+        """Проверяет, существует ли индекс"""
+        return self.config.index_file.exists() and self.config.metadata_file.exists()
     
     def build(self, force_rebuild: bool = False) -> None:
         if self.config.index_file.exists() and not force_rebuild:
@@ -51,10 +53,11 @@ class IndexBuilder:
         logger.info("Saved metadata")
     
     @staticmethod
-    def load_index_and_metadata(
-        index_path: Path, metadata_path: Path
-    ) -> Tuple[faiss.Index, List[dict]]:
+    def load_index_and_metadata(index_path: Path, metadata_path: Path
+                                ) -> Tuple[faiss.Index, List[dict]]:
         index = faiss.read_index(str(index_path))
+        
         with open(metadata_path, "rb") as f:
             metadata = pickle.load(f)
+        
         return index, metadata
