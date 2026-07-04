@@ -27,6 +27,7 @@ class Config:
     # RAG
     rag_top_k: int = int(os.getenv("RAG_TOP_K", "5"))
     rag_min_similarity: float = float(os.getenv("RAG_MIN_SIMILARITY", "0.75"))
+    rag_examples_in_prompt: int = int(os.getenv("RAG_EXAMPLES_IN_PROMPT", "2"))
 
     # Кэш
     cache_size: int = int(os.getenv("CACHE_SIZE", "1000"))
