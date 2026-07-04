@@ -1,8 +1,6 @@
+version: '3.8'
 
 services:
-  # ==========================================
-  # 1. OLLAMA — сервер для LLM
-  # ==========================================
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -14,37 +12,32 @@ services:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_HOST=0.0.0.0
     restart: unless-stopped
-    # Если есть NVIDIA GPU — раскомментируй
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
     command: serve
 
-  # ==========================================
-  # 2. TRANSLATOR — наш сервис перевода
-  # ==========================================
   translator:
     build: .
     container_name: patent-translator
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434/v1
-      - LLM_MODEL=qwen2.5:7b
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
-      - LOG_LEVEL=INFO
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434/v1}
+      - LLM_MODEL=${LLM_MODEL:-qwen2.5:7b}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.0}
+      - LLM_CONTEXT_SIZE=${LLM_CONTEXT_SIZE:-2048}
+      - API_HOST=${API_HOST:-0.0.0.0}
+      - API_PORT=${API_PORT:-8000}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - RAG_TOP_K=${RAG_TOP_K:-5}
+      - RAG_MIN_SIMILARITY=${RAG_MIN_SIMILARITY:-0.75}
+      - RAG_EXAMPLES_IN_PROMPT=${RAG_EXAMPLES_IN_PROMPT:-2}
+      - CACHE_SIZE=${CACHE_SIZE:-1000}
+      - GLOSSARY_PATH=${GLOSSARY_PATH:-data/merged_glossary.jsonl}
+      - DATA_DIR=${DATA_DIR:-data}
     volumes:
       - ./data:/app/data
-      - ./rag:/app/rag
       - ./scripts:/app/scripts
       - ./config.py:/app/config.py
-      - ./translator.py:/app/translator.py
-      - ./main.py:/app/main.py
+      - ./prompts.yaml:/app/prompts.yaml
     depends_on:
       - ollama
     restart: unless-stopped
