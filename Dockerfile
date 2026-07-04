@@ -8,20 +8,25 @@ RUN apt-get update && apt-get install -y \
     g++ \
     cmake \
     build-essential \
+    curl \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем зависимости
+# Копируем зависимости и устанавливаем
 COPY requirements.txt .
-
-# Устанавливаем Python-пакеты
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем остальной код
+# Копируем код
 COPY . .
 
 # Создаём папку для данных
 RUN mkdir -p data
 
+# Копируем скрипт инициализации
+COPY scripts/init.sh /app/scripts/init.sh
+RUN chmod +x /app/scripts/init.sh
+
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Запускаем скрипт инициализации, затем uvicorn
+CMD ["/app/scripts/init.sh"]
